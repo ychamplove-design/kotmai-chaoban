@@ -14,5 +14,7 @@
   { "id": "gambling", "label": "พนันออนไลน์ผิดกฎหมาย" },
   { "id": "dog-bite", "label": "โดนหมากัด" },
   { "id": "animal-cruelty", "label": "สัตว์ถูกทารุณกรรม" },
-  { "id": "state-liability", "label": "ฟ้องหน่วยงานรัฐ" }
+  { "id": "state-liability", "label": "ฟ้องหน่วยงานรัฐ" },
+  { "id": "sexual-assault", "label": "ถูกคุกคาม/ล่วงละเมิดทางเพศ" },
+  { "id": "child-abuse", "label": "เด็กถูกทำร้ายในครอบครัว" }
 ]

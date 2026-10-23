@@ -38,6 +38,13 @@ h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,7vw,42px);lin
 .situation-results .match .kws{font-size:13px;color:var(--muted)}
 .situation-results .disclaimer{font-size:13px;color:var(--muted);margin:0}
 
+.feedback-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:10px}
+.feedback-box h3{margin:0;color:var(--ink);font-size:16px;letter-spacing:0;font-weight:600}
+.feedback-box textarea{font:inherit;font-size:16px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.feedback-box textarea:focus-visible{outline:3px solid var(--stamp);outline-offset:1px}
+.feedback-box > button{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px solid var(--forest);background:var(--forest);color:var(--bg);cursor:pointer;justify-self:start}
+.feedback-note{font-size:13px;color:var(--muted);margin:0}
+
 .toolbar{display:flex;flex-wrap:wrap;gap:8px}
 .toolbar .flag-btn{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px dashed var(--stamp);background:var(--stamp-soft);color:var(--stamp);cursor:pointer}
 .toolbar .flag-btn[aria-pressed="true"]{background:var(--stamp);color:var(--bg);border-style:solid}

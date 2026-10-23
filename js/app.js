@@ -369,6 +369,19 @@
     });
   }
 
+  function wireFeedbackBox() {
+    var input = document.getElementById("feedback-input");
+    var btn = document.getElementById("feedback-send");
+    if (!input || !btn) return;
+    btn.addEventListener("click", function () {
+      var text = input.value.trim();
+      if (!text) { input.focus(); return; }
+      var subject = "ความคิดเห็นเว็บรู้สิทธิรู้กฎหมาย";
+      var body = text + "\n\n(ส่งจากหน้า: " + location.href + ")";
+      location.href = "mailto:ychamplove@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    });
+  }
+
   function showOfflineNoteIfNeeded() {
     var note = document.getElementById("offline-note");
     function update() { note.classList.toggle("show", !navigator.onLine); }
@@ -411,6 +424,7 @@
         wireSearch();
         wireFlagToggle();
         wireSituationBox();
+        wireFeedbackBox();
         showOfflineNoteIfNeeded();
         registerServiceWorker();
         show((location.hash || "").slice(1));
