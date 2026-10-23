@@ -2,8 +2,8 @@
 :root{
   --bg:#f3f5f1; --surface:#ffffff; --ink:#1d2a24; --muted:#56655d; --line:#d6ddd6;
   --forest:#2f5d48; --forest-soft:#e3ece6; --stamp:#a33a2b; --stamp-soft:#f6e6e2;
-  --display:"Chonburi", "Anuphan", Georgia, serif;
-  --body:"Anuphan", "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+  --display:"Noto Sans Thai", "Sarabun", system-ui, sans-serif;
+  --body:"Noto Sans Thai", "Sarabun", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#141a17; --surface:#1c2420; --ink:#e6ece8; --muted:#a3b2aa; --line:#2f3b35;
@@ -16,7 +16,7 @@
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.7;margin:0}
 .wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px;display:grid;gap:28px}
 header{display:grid;gap:8px}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,7vw,42px);line-height:1.25;margin:0;color:var(--forest);text-wrap:balance}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,7vw,42px);line-height:1.25;margin:0;color:var(--forest);text-wrap:balance}
 .lede{margin:0;color:var(--muted);max-width:60ch}
 
 .search{display:flex;gap:8px}
@@ -27,13 +27,19 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,7vw,42px);lin
 .search-results .hit b{color:var(--forest)}
 .search-empty{color:var(--muted);font-size:15px}
 
+.toolbar{display:flex;flex-wrap:wrap;gap:8px}
+.toolbar .flag-btn{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px dashed var(--stamp);background:var(--stamp-soft);color:var(--stamp);cursor:pointer}
+.toolbar .flag-btn[aria-pressed="true"]{background:var(--stamp);color:var(--bg);border-style:solid}
+
 nav{display:flex;flex-wrap:wrap;gap:8px}
-nav button{font:inherit;font-size:16px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px solid var(--forest);background:transparent;color:var(--forest);cursor:pointer}
+nav button{font:inherit;font-size:16px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px solid var(--forest);background:transparent;color:var(--forest);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+nav button svg{flex:none;width:18px;height:18px}
 nav button[aria-selected="true"]{background:var(--forest);color:var(--bg)}
 nav button:focus-visible,.copy:focus-visible,a:focus-visible,.hit:focus-visible{outline:3px solid var(--stamp);outline-offset:2px}
 section.topic{display:grid;gap:26px}
 section.topic[hidden]{display:none}
-h2{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.35;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.35;margin:0;text-wrap:balance;display:flex;align-items:center;gap:10px}
+h2 .topic-icon{flex:none;width:30px;height:30px;color:var(--forest)}
 h3{font-size:14px;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:600}
 .block p{margin:0 0 10px;max-width:65ch}
 .situation{font-size:19px}
@@ -61,4 +67,19 @@ ol.steps li span{min-width:0;padding-top:3px}
 a{color:var(--forest)}
 .offline-note{display:none;font-size:14px;background:var(--forest-soft);color:var(--forest);border-radius:8px;padding:8px 14px}
 .offline-note.show{display:block}
+
+.flagged-view{display:grid;gap:18px}
+.flagged-view .flagged-intro{color:var(--muted);margin:0}
+.flagged-case{border-color:var(--stamp)}
+.flagged-case .source-topic{font-size:13px;color:var(--muted)}
+
+.sim{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;display:grid;gap:14px}
+.sim h3{margin:0}
+.sim-question{font-size:17px;margin:0}
+.sim-options{display:grid;gap:8px}
+.sim-options button{font:inherit;font-size:16px;text-align:left;padding:12px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.sim-options button:hover{border-color:var(--forest)}
+.sim-result{display:grid;gap:10px}
+.sim-result ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.sim-restart{justify-self:start;font:inherit;font-size:14px;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 footer{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}

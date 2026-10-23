@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var state = { order: [], topics: {} };
+  var state = { order: [], topics: {}, flagged: false };
 
   function escapeHtml(str) {
     return String(str)
@@ -15,9 +15,122 @@
     return escapeHtml(str).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
   }
 
+  // Simple line-icon set, one per topic id, drawn by hand (no external image fetch, no stock photos).
+  var ICON_PATHS = {
+    forest: '<path d="M12 2 6 11h3l-4 6h5v4h4v-4h5l-4-6h3z"/>',
+    debt: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.5c0-1.4 1.2-2.3 2.6-2.3 1.4 0 2.4.8 2.4 1.9 0 2.6-5 1.7-5 4.3 0 1.1 1 1.9 2.4 1.9 1.4 0 2.6-.9 2.6-2.3M12 5.5v13"/>',
+    arrest: '<circle cx="8" cy="15" r="3.5"/><circle cx="16" cy="15" r="3.5"/><path d="M8 11.5V9a4 4 0 0 1 8 0v2.5"/>',
+    land: '<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',
+    road: '<path d="M4 21 9 3h6l5 18M8 21l1.5-5h5L16 21M10 9h4"/>',
+    trade: '<path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+    labor: '<path d="M4 21v-7a8 8 0 0 1 16 0v7M2 21h20"/>',
+    divorce: '<path d="M12 7 9 13h3l-2 4M5 4c-3 3-3 7 0 10M19 4c3 3 3 7 0 10"/>',
+    inheritance: '<path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3M9 11h6M9 15h6"/>',
+    _default: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'
+  };
+
+  function iconSvg(id, cls) {
+    var path = ICON_PATHS[id] || ICON_PATHS._default;
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+  }
+
+  function renderCaseArticle(c, opts) {
+    opts = opts || {};
+    var html = '<article class="case' + (c.controversial ? ' flagged-case' : '') + '">';
+    html += '<span class="tag">' + (c.controversial ? "คดีน่าสงสัย" : "คดีจริง") + '</span>';
+    if (opts.sourceLabel) html += '<div class="source-topic">จากเรื่อง: ' + escapeHtml(opts.sourceLabel) + '</div>';
+    html += '<h4>' + md(c.title) + '</h4>';
+    html += '<div class="ref">' + md(c.ref) + '</div>';
+    html += '<p>' + md(c.desc) + '</p>';
+    html += '<ul>';
+    c.points.forEach(function (p) { html += '<li>' + md(p) + '</li>'; });
+    html += '</ul>';
+    if (c.extraWarn) html += '<p class="warn">' + md(c.extraWarn) + '</p>';
+    html += '<p class="lesson">' + md(c.lesson) + '</p>';
+    html += '</article>';
+    return html;
+  }
+
+  // Road-accident scenario picker: reorders/filters road.json's own verified steps & laws
+  // per scenario. It introduces no new legal claims — every line shown already exists in road.json.
+  var ROAD_SCENARIOS = [
+    { label: "ถูกชน คู่กรณียังอยู่ที่เกิดเหตุ บาดเจ็บ", steps: [0, 1, 2, 3], laws: [0, 1], help: [1, 0] },
+    { label: "ถูกชนแล้วคู่กรณีหลบหนี", steps: [0, 1, 2, 4], laws: [0, 1, 2], help: [1, 0, 2] },
+    { label: "คู่กรณีไม่มีประกันภัย/ไม่มี พ.ร.บ.", steps: [0, 1, 2, 4], laws: [0, 1], help: [2, 0] },
+    { label: "มีผู้เสียชีวิตจากอุบัติเหตุ", steps: [1, 2], laws: [2], help: [0] }
+  ];
+
+  function renderRoadSim(t) {
+    var html = '<div class="sim" id="road-sim" data-topic="' + t.id + '">';
+    html += '<h3>แบบจำลอง: เจออุบัติเหตุแบบนี้ ต้องทำอะไรก่อน</h3>';
+    html += '<div class="sim-body">';
+    html += '<p class="sim-question">เลือกสถานการณ์ที่ตรงกับคุณที่สุด</p>';
+    html += '<div class="sim-options">';
+    ROAD_SCENARIOS.forEach(function (sc, i) {
+      html += '<button type="button" data-sim-i="' + i + '">' + escapeHtml(sc.label) + '</button>';
+    });
+    html += '</div></div></div>';
+    return html;
+  }
+
+  function wireRoadSim() {
+    var root = document.getElementById("road-sim");
+    if (!root) return;
+    var topic = state.topics.road;
+    if (!topic) return;
+    var body = root.querySelector(".sim-body");
+
+    function showResult(i) {
+      var sc = ROAD_SCENARIOS[i];
+      var html = '<div class="sim-result">';
+      html += '<p class="sim-question">' + escapeHtml(sc.label) + ' — ทำตามนี้:</p>';
+      html += '<ol>';
+      sc.steps.forEach(function (idx) { html += '<li>' + md(topic.steps[idx]) + '</li>'; });
+      html += '</ol>';
+      if (sc.laws.length) {
+        html += '<div class="law">';
+        sc.laws.forEach(function (idx) {
+          var l = topic.laws[idx];
+          html += '<div><b>' + md(l.title) + '</b>' + md(l.text) + '</div>';
+        });
+        html += '</div>';
+      }
+      html += '<div class="help">';
+      sc.help.forEach(function (idx) {
+        var h = topic.help[idx];
+        html += '<div class="line"><span class="who">' + md(h.who) + '</span><span class="num">' + md(h.num) +
+          '</span><button class="copy" data-n="' + escapeHtml(h.copy) + '">คัดลอก</button></div>';
+      });
+      html += '</div>';
+      html += '<button type="button" class="sim-restart">เลือกสถานการณ์อื่น</button>';
+      html += '</div>';
+      body.innerHTML = html;
+      body.querySelector(".sim-restart").addEventListener("click", showPicker);
+    }
+
+    function showPicker() {
+      var html = '<p class="sim-question">เลือกสถานการณ์ที่ตรงกับคุณที่สุด</p><div class="sim-options">';
+      ROAD_SCENARIOS.forEach(function (sc, i) {
+        html += '<button type="button" data-sim-i="' + i + '">' + escapeHtml(sc.label) + '</button>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      wireOptionButtons();
+    }
+
+    function wireOptionButtons() {
+      body.querySelectorAll("[data-sim-i]").forEach(function (btn) {
+        btn.addEventListener("click", function () { showResult(Number(btn.dataset.simI)); });
+      });
+    }
+
+    wireOptionButtons();
+  }
+
   function renderTopic(t) {
     var html = "";
-    html += '<h2>' + md(t.title) + '</h2>';
+    html += '<h2>' + iconSvg(t.id, "topic-icon") + md(t.title) + '</h2>';
     html += '<div class="block"><p class="situation">' + md(t.situation) + '</p></div>';
 
     html += '<div class="block"><h3>ทำทันที</h3><ol class="steps">';
@@ -31,17 +144,9 @@
     if (t.warn) html += '<p class="warn">' + md(t.warn) + '</p>';
     html += '</div>';
 
-    var c = t.case;
-    html += '<article class="case"><span class="tag">คดีจริง</span>';
-    html += '<h4>' + md(c.title) + '</h4>';
-    html += '<div class="ref">' + md(c.ref) + '</div>';
-    html += '<p>' + md(c.desc) + '</p>';
-    html += '<ul>';
-    c.points.forEach(function (p) { html += '<li>' + md(p) + '</li>'; });
-    html += '</ul>';
-    if (c.extraWarn) html += '<p class="warn">' + md(c.extraWarn) + '</p>';
-    html += '<p class="lesson">' + md(c.lesson) + '</p>';
-    html += '</article>';
+    html += renderCaseArticle(t.case);
+
+    if (t.id === "road") html += renderRoadSim(t);
 
     html += '<div class="block help"><h3>ขอความช่วยเหลือ</h3>';
     t.help.forEach(function (h) {
@@ -64,10 +169,11 @@
     nav.innerHTML = state.order.map(function (id) {
       var t = state.topics[id];
       return '<button role="tab" id="t-' + id + '" data-t="' + id + '" aria-selected="false">' +
-        escapeHtml(t.navLabel) + '</button>';
+        iconSvg(id, "") + escapeHtml(t.navLabel) + '</button>';
     }).join("");
     nav.querySelectorAll("button").forEach(function (b) {
       b.addEventListener("click", function () {
+        setFlagged(false);
         show(b.dataset.t);
         try { history.replaceState(null, "", "#" + b.dataset.t); } catch (e) {}
         window.scrollTo({ top: 0 });
@@ -82,6 +188,7 @@
       return '<section class="topic" id="' + id + '" role="tabpanel" aria-labelledby="t-' + id + '" hidden>' +
         renderTopic(t) + '</section>';
     }).join("");
+    wireRoadSim();
   }
 
   function show(id) {
@@ -93,6 +200,58 @@
       s.hidden = s.id !== id;
     });
     clearSearch();
+  }
+
+  function buildFlaggedView() {
+    var flagged = state.order
+      .map(function (id) { return state.topics[id]; })
+      .filter(function (t) { return t.case && t.case.controversial; });
+    var html = '<div class="flagged-view">';
+    html += '<p class="flagged-intro">คดีจริงที่สังคมตั้งคำถามเรื่องความยุติธรรม เช่น คดีที่ล่าช้า คดีที่ผลลัพธ์ดูไม่สมเหตุสมผล หรือยังไม่มีบทสรุป — เก็บไว้ให้เห็นว่ากระบวนการยุติธรรมไม่ได้สมบูรณ์แบบเสมอไป</p>';
+    if (!flagged.length) {
+      html += '<p class="search-empty">ยังไม่มีคดีในหมวดนี้</p>';
+    } else {
+      flagged.forEach(function (t) {
+        html += renderCaseArticle(t.case, { sourceLabel: t.navLabel });
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function setFlagged(on) {
+    state.flagged = on;
+    var btn = document.getElementById("flag-toggle");
+    var app = document.getElementById("app");
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    if (on) {
+      document.querySelectorAll("nav#nav button").forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+      app.dataset.flagged = "1";
+      app.querySelectorAll("section.topic").forEach(function (s) { s.hidden = true; });
+      var holder = document.getElementById("flagged-holder");
+      if (!holder) {
+        holder = document.createElement("div");
+        holder.id = "flagged-holder";
+        app.appendChild(holder);
+      }
+      holder.innerHTML = buildFlaggedView();
+      holder.hidden = false;
+    } else {
+      var h2 = document.getElementById("flagged-holder");
+      if (h2) h2.hidden = true;
+    }
+  }
+
+  function wireFlagToggle() {
+    var btn = document.getElementById("flag-toggle");
+    btn.addEventListener("click", function () {
+      if (state.flagged) {
+        setFlagged(false);
+        show((location.hash || "").slice(1));
+      } else {
+        setFlagged(true);
+      }
+    });
   }
 
   function clearSearch() {
@@ -126,6 +285,7 @@
     box.querySelectorAll(".hit").forEach(function (btn) {
       btn.addEventListener("click", function () {
         document.getElementById("search-input").value = "";
+        setFlagged(false);
         show(btn.dataset.t);
         try { history.replaceState(null, "", "#" + btn.dataset.t); } catch (e) {}
         window.scrollTo({ top: 0 });
@@ -180,6 +340,7 @@
         buildSections();
         wireCopyButtons();
         wireSearch();
+        wireFlagToggle();
         showOfflineNoteIfNeeded();
         registerServiceWorker();
         show((location.hash || "").slice(1));
