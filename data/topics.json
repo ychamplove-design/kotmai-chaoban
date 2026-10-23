@@ -11,5 +11,8 @@
   { "id": "image-abuse", "label": "ถูกแชร์ภาพ/คลิปโป๊โดยไม่ยินยอม" },
   { "id": "sextortion", "label": "ถูกข่มขู่กรรโชกเงินออนไลน์" },
   { "id": "cyberbully", "label": "ถูกด่า/คุกคามออนไลน์" },
-  { "id": "gambling", "label": "พนันออนไลน์ผิดกฎหมาย" }
+  { "id": "gambling", "label": "พนันออนไลน์ผิดกฎหมาย" },
+  { "id": "dog-bite", "label": "โดนหมากัด" },
+  { "id": "animal-cruelty", "label": "สัตว์ถูกทารุณกรรม" },
+  { "id": "state-liability", "label": "ฟ้องหน่วยงานรัฐ" }
 ]
