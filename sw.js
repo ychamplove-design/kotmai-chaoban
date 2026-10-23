@@ -1,5 +1,5 @@
 /* Bump CACHE_NAME whenever shell files change, so old caches get dropped. */
-var CACHE_NAME = "kotmai-chaoban-v1";
+var CACHE_NAME = "kotmai-chaoban-v2";
 var TOPIC_INDEX = "data/topics.json";
 var SHELL = [
   "./",
@@ -35,19 +35,19 @@ self.addEventListener("activate", function (event) {
   );
 });
 
-// Stale-while-revalidate: serve from cache instantly, refresh cache in the background.
+// Network-first: always try to show the latest deployed content when online.
+// Falls back to cache only when the network is unavailable, so the site still works offline.
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      var fetchPromise = fetch(event.request).then(function (response) {
-        if (response && response.ok) {
-          var copy = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
-        }
-        return response;
-      }).catch(function () { return cached; });
-      return cached || fetchPromise;
+    fetch(event.request).then(function (response) {
+      if (response && response.ok) {
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
+      }
+      return response;
+    }).catch(function () {
+      return caches.match(event.request);
     })
   );
 });
