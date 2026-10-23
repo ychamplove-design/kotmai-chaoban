@@ -1,0 +1,14 @@
+{
+  "name": "กฎหมายชาวบ้าน",
+  "short_name": "กฎหมายชาวบ้าน",
+  "description": "เจอปัญหากฎหมายแล้วต้องทำยังไง อธิบายง่าย มีมาตรากฎหมายและคดีจริงให้ตรวจสอบได้",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f1",
+  "theme_color": "#2f5d48",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
