@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var state = { order: [], topics: {}, flagged: false };
+  var state = { order: [], topics: {}, flagged: false, keywords: {} };
 
   function escapeHtml(str) {
     return String(str)
@@ -33,6 +33,14 @@
     var path = ICON_PATHS[id] || ICON_PATHS._default;
     return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+  }
+
+  // Accepts either the old single "case" object or the new "cases" array, so partially
+  // migrated content (while the case-research pass is still writing files) still renders.
+  function getCases(t) {
+    if (Array.isArray(t.cases)) return t.cases;
+    if (t.case) return [t.case];
+    return [];
   }
 
   function renderCaseArticle(c, opts) {
@@ -144,7 +152,7 @@
     if (t.warn) html += '<p class="warn">' + md(t.warn) + '</p>';
     html += '</div>';
 
-    html += renderCaseArticle(t.case);
+    getCases(t).forEach(function (c) { html += renderCaseArticle(c); });
 
     if (t.id === "road") html += renderRoadSim(t);
 
@@ -203,18 +211,17 @@
   }
 
   function buildFlaggedView() {
-    var flagged = state.order
-      .map(function (id) { return state.topics[id]; })
-      .filter(function (t) { return t.case && t.case.controversial; });
     var html = '<div class="flagged-view">';
     html += '<p class="flagged-intro">คดีจริงที่สังคมตั้งคำถามเรื่องความยุติธรรม เช่น คดีที่ล่าช้า คดีที่ผลลัพธ์ดูไม่สมเหตุสมผล หรือยังไม่มีบทสรุป — เก็บไว้ให้เห็นว่ากระบวนการยุติธรรมไม่ได้สมบูรณ์แบบเสมอไป</p>';
-    if (!flagged.length) {
-      html += '<p class="search-empty">ยังไม่มีคดีในหมวดนี้</p>';
-    } else {
-      flagged.forEach(function (t) {
-        html += renderCaseArticle(t.case, { sourceLabel: t.navLabel });
+    var any = false;
+    state.order.forEach(function (id) {
+      var t = state.topics[id];
+      getCases(t).filter(function (c) { return c.controversial; }).forEach(function (c) {
+        any = true;
+        html += renderCaseArticle(c, { sourceLabel: t.navLabel });
       });
-    }
+    });
+    if (!any) html += '<p class="search-empty">ยังไม่มีคดีในหมวดนี้</p>';
     html += '</div>';
     return html;
   }
@@ -309,6 +316,59 @@
     input.addEventListener("input", function () { runSearch(input.value); });
   }
 
+  // Matches free-text input against a hand-curated keyword list per topic (data/keywords.json).
+  // Purely a lookup into the site's own already-verified topics — no legal content is generated.
+  function matchSituation(text) {
+    text = text.toLowerCase();
+    var rows = state.order.map(function (id) {
+      var kws = state.keywords[id] || [];
+      var hits = kws.filter(function (k) { return text.indexOf(k.toLowerCase()) !== -1; });
+      return { id: id, label: state.topics[id].navLabel, title: state.topics[id].title, hits: hits, score: hits.length };
+    });
+    rows = rows.filter(function (r) { return r.score > 0; });
+    rows.sort(function (a, b) { return b.score - a.score; });
+    return rows.slice(0, 3);
+  }
+
+  function wireSituationBox() {
+    var input = document.getElementById("situation-input");
+    var btn = document.getElementById("situation-check");
+    var box = document.getElementById("situation-results");
+    if (!input || !btn) return;
+
+    function run() {
+      var text = input.value.trim();
+      if (!text) { box.hidden = true; box.innerHTML = ""; return; }
+      var matches = matchSituation(text);
+      var html = "";
+      if (!matches.length) {
+        html += '<p class="search-empty">ไม่พบเรื่องที่ใกล้เคียง ลองเล่าใหม่ด้วยคำอื่น หรือโทรศูนย์ดำรงธรรม 1567 เพื่อสอบถามโดยตรง</p>';
+      } else {
+        matches.forEach(function (m) {
+          html += '<button type="button" class="match" data-t="' + m.id + '"><b>' + escapeHtml(m.label) + '</b>' +
+            '<span>' + escapeHtml(m.title) + '</span>' +
+            '<span class="kws">ใกล้เคียงเพราะมีคำว่า: ' + m.hits.map(escapeHtml).join(", ") + '</span></button>';
+        });
+        html += '<p class="disclaimer">นี่เป็นแค่การจับคู่คำที่ใกล้เคียงอัตโนมัติ ไม่ใช่การวิเคราะห์ข้อกฎหมาย ควรอ่านรายละเอียดเต็มในหัวข้อที่เลือกเองอีกครั้ง</p>';
+      }
+      box.innerHTML = html;
+      box.hidden = false;
+      box.querySelectorAll(".match").forEach(function (m) {
+        m.addEventListener("click", function () {
+          setFlagged(false);
+          show(m.dataset.t);
+          try { history.replaceState(null, "", "#" + m.dataset.t); } catch (e) {}
+          window.scrollTo({ top: 0 });
+        });
+      });
+    }
+
+    btn.addEventListener("click", run);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(); }
+    });
+  }
+
   function showOfflineNoteIfNeeded() {
     var note = document.getElementById("offline-note");
     function update() { note.classList.toggle("show", !navigator.onLine); }
@@ -327,20 +387,30 @@
     return fetch("data/topics/" + id + ".json").then(function (r) { return r.json(); });
   }
 
+  function loadKeywords() {
+    return fetch("data/keywords.json").then(function (r) { return r.json(); }).catch(function () { return {}; });
+  }
+
   function init() {
     fetch("data/topics.json")
       .then(function (r) { return r.json(); })
       .then(function (list) {
         state.order = list.map(function (row) { return row.id; });
-        return Promise.all(list.map(function (row) { return loadTopic(row.id); }));
+        return Promise.all([
+          Promise.all(list.map(function (row) { return loadTopic(row.id); })),
+          loadKeywords()
+        ]);
       })
-      .then(function (topics) {
+      .then(function (results) {
+        var topics = results[0];
+        state.keywords = results[1];
         topics.forEach(function (t) { state.topics[t.id] = t; });
         buildNav();
         buildSections();
         wireCopyButtons();
         wireSearch();
         wireFlagToggle();
+        wireSituationBox();
         showOfflineNoteIfNeeded();
         registerServiceWorker();
         show((location.hash || "").slice(1));

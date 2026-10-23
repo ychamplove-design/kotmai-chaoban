@@ -1,5 +1,5 @@
 /* Bump CACHE_NAME whenever shell files change, so old caches get dropped. */
-var CACHE_NAME = "kotmai-chaoban-v2";
+var CACHE_NAME = "kotmai-chaoban-v3";
 var TOPIC_INDEX = "data/topics.json";
 var SHELL = [
   "./",
@@ -8,6 +8,7 @@ var SHELL = [
   "js/app.js",
   "manifest.json",
   "icons/icon.svg",
+  "data/keywords.json",
   TOPIC_INDEX
 ];
 
